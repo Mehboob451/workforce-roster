@@ -6,7 +6,8 @@
     <title>ARM Project - Workforce Roster</title>
     <!-- PapaParse for robust CSV processing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-    </style>
+    
+    <style>
         :root {
             --bg-color: #0b0f19;
             --card-bg: #111827;
@@ -28,7 +29,7 @@
         }
 
         .container {
-            max-width: 1300px;
+            max-width: 1400px;
             margin: 0 auto;
         }
 
@@ -186,14 +187,11 @@
         .legend-item { display: flex; align-items: center; gap: 8px; }
         .dot { width: 10px; height: 10px; border-radius: 50%; }
 
-        /* Spreadsheet Workspace Section */
+        /* Spreadsheet Workspace Section - Expanded Text Setup */
         .section-title {
             font-size: 18px;
             font-weight: 700;
             margin-bottom: 16px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
         }
 
         .table-wrapper {
@@ -201,7 +199,7 @@
             border: 1px solid var(--border-color);
             border-radius: 12px;
             overflow-x: auto;
-            max-height: 500px;
+            max-height: 550px;
         }
 
         table {
@@ -209,6 +207,7 @@
             border-collapse: collapse;
             text-align: left;
             font-size: 13px;
+            table-layout: auto;
         }
 
         th {
@@ -219,15 +218,24 @@
             position: sticky;
             top: 0;
             z-index: 10;
+            white-space: normal;
+            min-width: 140px;
+        }
+
+        /* Give specific space adjustments to wider text content fields */
+        th:nth-child(1), th:nth-child(9), th:nth-child(16) {
+            min-width: 220px;
         }
 
         td {
-            padding: 4px 6px;
+            padding: 4px;
             border-bottom: 1px solid var(--border-color);
+            vertical-align: middle;
         }
 
         tr:hover td { background-color: #1e293b; }
 
+        /* Make inputs clear and responsive to full layout text wrapping */
         td input {
             background: transparent;
             border: 1px solid transparent;
@@ -236,24 +244,14 @@
             width: 100%;
             box-sizing: border-box;
             border-radius: 4px;
+            font-size: 13px;
         }
+        
         td input:focus {
             background-color: #0b0f19;
             border-color: var(--accent-yellow);
             outline: none;
         }
-        
-        .status-pill {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-        .pill-expired { background: rgba(239,68,68,0.2); color: #f87171; }
-        .pill-valid { background: rgba(16,185,129,0.2); color: #34d399; }
-        .pill-warn { background: rgba(245,158,11,0.2); color: #fbbf24; }
     </style>
 </head>
 <body>
@@ -349,14 +347,13 @@
 <script>
     let headersList = [];
     let masterDataset = [];
-    let currentFilterTab = 'all'; // default view mode
+    let currentFilterTab = 'all';
 
-    // Fetch master CSV file automatically on application launch
     window.addEventListener('DOMContentLoaded', () => {
         fetch('data.csv')
             .then(res => { if (!res.ok) throw new Error(); return res.text(); })
             .then(csv => parseInputCSV(csv))
-            .catch(() => { document.getElementById('syncLabel').innerText = "Standby: Please choose a valid roster file to populate dashboard metrics."; });
+            .catch(() => { document.getElementById('syncLabel').innerText = "Standby: File data loading..."; });
     });
 
     function parseInputCSV(text) {
@@ -372,7 +369,6 @@
         });
     }
 
-    // High-performance Date & State Engine
     function calculateMetrics() {
         let total = masterDataset.length;
         let expiredCount = 0;
@@ -382,12 +378,9 @@
         let txSent = 0, txDone = 0, txNone = 0;
         let iqValid = 0;
 
-        const currentYear = 2026;
-        const currentMonth = 7; // July 2026 reference baseline
-        const currentDate = new Date(currentYear, currentMonth - 1, 12);
+        const currentDate = new Date(2026, 6, 12); // Reference July 12, 2026
 
         masterDataset.forEach(row => {
-            // 1. Calculate Iqama Expiry
             if (row['Iqama Expiry']) {
                 const parts = row['Iqama Expiry'].split('/');
                 if(parts.length === 3) {
@@ -405,13 +398,15 @@
                         row._iqamaState = 'valid';
                         iqValid++;
                     }
+                } else {
+                    row._iqamaState = 'valid';
+                    iqValid++;
                 }
             } else {
                 row._iqamaState = 'valid';
                 iqValid++;
             }
 
-            // 2. Parse Transfer Statuses
             let tx = (row['Transfer Status'] || '').toLowerCase();
             if (tx.includes('complete')) {
                 transferredCount++;
@@ -423,13 +418,11 @@
             }
         });
 
-        // Set Metric Top Badges
         document.getElementById('badgeTotal').innerText = `${total} workers`;
         document.getElementById('badgeExpired').innerText = `${expiredCount} iqama expired`;
         document.getElementById('badgeSoon').innerText = `${soonCount} iqama <30d`;
         document.getElementById('badgeTransferred').innerText = `${transferredCount} transferred`;
 
-        // Draw Rings
         updateVisualRing('segTransfer', 'textTransfer', total, txDone, '#10b981');
         document.getElementById('lblSent').innerText = `${txSent} Transfer request sent`;
         document.getElementById('lblDone').innerText = `${txDone} Transfer completed`;
@@ -461,18 +454,15 @@
         processFilters();
     }
 
-    // Handles layout visibility, tab updates, and live queries simultaneously
     function processFilters() {
         const searchVal = document.getElementById('masterSearch').value.toLowerCase().trim();
         
         let filteredData = masterDataset.filter(row => {
-            // Apply Tab Condition
             if (currentFilterTab === 'expired' && row._iqamaState !== 'expired') return false;
             if (currentFilterTab === 'soon' && row._iqamaState !== 'soon') return false;
             if (currentFilterTab === 'sent' && !(row['Transfer Status'] || '').toLowerCase().includes('sent')) return false;
             if (currentFilterTab === 'completed' && !(row['Transfer Status'] || '').toLowerCase().includes('complete')) return false;
 
-            // Apply Query Box Condition
             if (searchVal !== '') {
                 let match = Object.values(row).some(v => String(v).toLowerCase().includes(searchVal));
                 if (!match) return false;
@@ -493,14 +483,12 @@
             headersList = Object.keys(dataArray[0]).filter(k => !k.startsWith('_'));
         }
 
-        // Generate Sticky Header List
         headersList.forEach(h => {
             const th = document.createElement('th');
             th.innerText = h;
             trHead.appendChild(th);
         });
 
-        // Generate Actionable Table Grid Inputs
         dataArray.forEach(row => {
             const tr = document.createElement('tr');
             headersList.forEach(col => {
@@ -509,7 +497,6 @@
                 boxInput.type = "text";
                 boxInput.value = row[col] || '';
                 
-                // Keep data array state synchronized on active keystroke changes
                 boxInput.addEventListener('change', (e) => {
                     row[col] = e.target.value;
                     calculateMetrics();
@@ -526,7 +513,7 @@
         let newRecord = {};
         headersList.forEach(h => newRecord[h] = '');
         newRecord['Name'] = 'New Worker Record';
-        masterDataset.unshift(newRecord); // inject at top row workspace
+        masterDataset.unshift(newRecord);
         calculateMetrics();
         processFilters();
     }
@@ -540,7 +527,6 @@
     }
 
     function exportDataCSV() {
-        // Stripe parsing state flags before building raw text string
         const outputCollection = masterDataset.map(item => {
             let cleanObj = {};
             headersList.forEach(h => cleanObj[h] = item[h] || '');
