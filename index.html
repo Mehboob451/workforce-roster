@@ -3,195 +3,556 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ARM Workforce Roster Manager</title>
+    <title>ARM Project - Workforce Roster</title>
+    <!-- PapaParse for robust CSV processing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 20px; background-color: #f7fafc; color: #2d3748; }
-        .container { max-width: 1400px; margin: 0 auto; background: #ffffff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); }
-        h2 { margin-top: 0; color: #1a202c; border-bottom: 2px solid #edf2f7; padding-bottom: 12px; }
-        .control-panel { display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; padding: 15px; background: #edf2f7; border-radius: 6px; align-items: center; }
-        .search-wrapper { flex: 1; min-width: 300px; }
-        input[type="text"] { width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
-        .btn { background-color: #3182ce; color: white; padding: 10px 18px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; transition: background 0.2s; }
-        .btn:hover { background-color: #2b6cb0; }
-        .btn-download { background-color: #38a169; }
-        .btn-download:hover { background-color: #2f855a; }
-        .file-upload-btn { position: relative; overflow: hidden; display: inline-block; }
-        .file-upload-btn input[type="file"] { position: absolute; left: 0; top: 0; opacity: 0; cursor: pointer; height: 100%; width: 100%; }
-        .status-msg { margin-left: auto; font-size: 14px; font-weight: bold; color: #4a5568; }
-        .table-container { overflow-x: auto; max-height: 550px; border: 1px solid #e2e8f0; border-radius: 4px; }
-        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
-        th { background-color: #2d3748; color: white; padding: 12px 10px; position: sticky; top: 0; z-index: 10; font-weight: 600; }
-        td { padding: 6px 8px; border-bottom: 1px solid #edf2f7; background: #ffffff; min-width: 120px; }
-        tr:hover td { background-color: #f7fafc; }
-        td input { width: 100%; border: 1px solid transparent; padding: 6px; border-radius: 3px; background: transparent; font-size: 13px; box-sizing: border-box; }
-        td input:focus { border-color: #3182ce; background: #fff; outline: none; box-shadow: 0 0 0 1px #3182ce; }
-        .highlight-match { background-color: #feebc8 !important; }
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: #111827;
+            --accent-yellow: #f59e0b;
+            --accent-red: #ef4444;
+            --accent-green: #10b981;
+            --accent-blue: #3b82f6;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --border-color: #1f2937;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 24px;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+        }
+
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+        }
+
+        .header-sub {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--accent-yellow);
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        h1 {
+            margin: 0 0 20px 0;
+            font-size: 28px;
+            font-weight: 800;
+        }
+
+        /* Stats Summary Badges Row */
+        .stats-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .stat-badge {
+            background-color: #1e293b;
+            padding: 8px 16px;
+            border-radius: 9999px;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            border: 1px solid var(--border-color);
+        }
+        .badge-workers { border-color: var(--text-muted); }
+        .badge-expired { background: rgba(239, 68, 68, 0.15); color: #fca5a5; border-color: rgba(239, 68, 68, 0.3); }
+        .badge-warning { background: rgba(245, 158, 11, 0.15); color: #fde047; border-color: rgba(245, 158, 11, 0.3); }
+        .badge-transferred { background: rgba(16, 185, 129, 0.15); color: #6ee7b7; border-color: rgba(16, 185, 129, 0.3); }
+
+        /* Actions Row */
+        .actions-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 24px;
+            align-items: center;
+        }
+
+        .search-container {
+            flex: 1;
+            min-width: 280px;
+        }
+
+        .search-container input {
+            width: 100%;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 12px 16px;
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        .btn {
+            background-color: #1e293b;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        .btn:hover { background-color: #334155; }
+        .btn-add { background-color: var(--accent-yellow); color: #000; border: none; }
+        .btn-add:hover { background-color: #d97706; }
+        
+        .file-upload-wrapper { position: relative; overflow: hidden; display: inline-block; }
+        .file-upload-wrapper input[type="file"] { position: absolute; left: 0; top: 0; opacity: 0; height: 100%; width: 100%; cursor: pointer; }
+
+        /* Navigation Tabs */
+        .tabs-container {
+            display: flex;
+            gap: 8px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 24px;
+            padding-bottom: 8px;
+            overflow-x: auto;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            border-radius: 9999px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            background: transparent;
+            color: var(--text-muted);
+            border: none;
+            white-space: nowrap;
+        }
+        .tab.active {
+            background-color: var(--accent-yellow);
+            color: #000;
+        }
+
+        /* Analytics Grid Row */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .chart-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .chart-card h3 {
+            align-self: flex-start;
+            margin: 0 0 20px 0;
+            font-size: 14px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+        }
+
+        .chart-flex {
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            width: 100%;
+            gap: 20px;
+        }
+
+        /* SVG Donut Ring Styling */
+        .donut-svg { width: 120px; height: 120px; transform: rotate(-90deg); }
+        .donut-bg { fill: none; stroke: #1f2937; stroke-width: 4; }
+        .donut-segment { fill: none; stroke-width: 4; stroke-linecap: round; }
+        .center-text { font-size: 24px; font-weight: bold; fill: #ffffff; text-anchor: middle; dominant-baseline: middle; }
+
+        .legend { display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
+        .legend-item { display: flex; align-items: center; gap: 8px; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; }
+
+        /* Spreadsheet Workspace Section */
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .table-wrapper {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow-x: auto;
+            max-height: 500px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        th {
+            background-color: #1f2937;
+            color: var(--text-main);
+            padding: 14px 12px;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        td {
+            padding: 4px 6px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        tr:hover td { background-color: #1e293b; }
+
+        td input {
+            background: transparent;
+            border: 1px solid transparent;
+            color: white;
+            padding: 8px;
+            width: 100%;
+            box-sizing: border-box;
+            border-radius: 4px;
+        }
+        td input:focus {
+            background-color: #0b0f19;
+            border-color: var(--accent-yellow);
+            outline: none;
+        }
+        
+        .status-pill {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .pill-expired { background: rgba(239,68,68,0.2); color: #f87171; }
+        .pill-valid { background: rgba(16,185,129,0.2); color: #34d399; }
+        .pill-warn { background: rgba(245,158,11,0.2); color: #fbbf24; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>ARM Workforce Roster Manager</h2>
-    
-    <div class="control-panel">
-        <div class="search-wrapper">
-            <input type="text" id="iqamaSearch" placeholder="🔍 Search by Iqama Number..." oninput="searchIqama()">
-        </div>
-        
-        <div class="file-upload-btn">
-            <button class="btn">📤 Upload New CSV</button>
-            <input type="file" id="fileSelector" accept=".csv" onchange="importCSV(event)">
-        </div>
+    <div class="header-sub">ARM Project • Riyadh / Jeddah / Dammam</div>
+    <h1>Workforce Roster</h1>
 
-        <button class="btn btn-download" onclick="exportCSV()">📥 Download Updated CSV</button>
-        <span id="status" class="status-msg">Loading data...</span>
+    <!-- Stats Summary Row -->
+    <div class="stats-bar">
+        <div class="stat-badge badge-workers" id="badgeTotal">0 workers</div>
+        <div class="stat-badge badge-expired" id="badgeExpired">0 iqama expired</div>
+        <div class="stat-badge badge-warning" id="badgeSoon">0 iqama &lt;30d</div>
+        <div class="stat-badge badge-transferred" id="badgeTransferred">0 transferred</div>
+        <div style="margin-left: auto; align-self: center; font-size:12px; color:var(--text-muted);" id="syncLabel">Connected to GitHub Source</div>
     </div>
 
-    <div class="table-container">
-        <table id="rosterTable">
+    <!-- Actions bar -->
+    <div class="actions-row">
+        <div class="search-container">
+            <input type="text" id="masterSearch" placeholder="Search name, ID, mobile, iqama..." oninput="processFilters()">
+        </div>
+        
+        <button class="btn" onclick="exportDataCSV()">📥 Download CSV</button>
+        
+        <div class="file-upload-wrapper">
+            <button class="btn">📤 Upload / Bulk Update</button>
+            <input type="file" accept=".csv" onchange="handleFileUpload(event)">
+        </div>
+
+        <button class="btn btn-add" onclick="addNewWorkerRow()">+ Add Worker</button>
+    </div>
+
+    <!-- Filter Tabs -->
+    <div class="tabs-container">
+        <button class="tab active" onclick="switchTab('all', this)">Home</button>
+        <button class="tab" onclick="switchTab('full', this)">Full Roster</button>
+        <button class="tab" onclick="switchTab('expired', this)">Expired Iqama</button>
+        <button class="tab" onclick="switchTab('soon', this)">Expiring Soon</button>
+        <button class="tab" onclick="switchTab('sent', this)">Transfer Sent</button>
+        <button class="tab" onclick="switchTab('completed', this)">Transfer Completed</button>
+    </div>
+
+    <!-- Analytics Charts Row -->
+    <div class="charts-grid" id="chartsSection">
+        <!-- Transfer Chart -->
+        <div class="chart-card">
+            <h3>Transfer Status</h3>
+            <div class="chart-flex">
+                <svg class="donut-svg" id="svgTransfer">
+                    <circle class="donut-bg" cx="60" cy="60" r="50"></circle>
+                    <circle class="donut-segment" id="segTransfer" cx="60" cy="60" r="50"></circle>
+                    <text class="center-text" x="60" y="60" id="textTransfer">0</text>
+                </svg>
+                <div class="legend">
+                    <div class="legend-item"><span class="dot" style="background:#3b82f6"></span> <span id="lblSent">0 Request sent</span></div>
+                    <div class="legend-item"><span class="dot" style="background:#10b981"></span> <span id="lblDone">0 Completed</span></div>
+                    <div class="legend-item"><span class="dot" style="background:#f59e0b"></span> <span id="lblNeed">0 Not requested</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Iqama Chart -->
+        <div class="chart-card">
+            <h3>Iqama Status</h3>
+            <div class="chart-flex">
+                <svg class="donut-svg" id="svgIqama">
+                    <circle class="donut-bg" cx="60" cy="60" r="50"></circle>
+                    <circle class="donut-segment" id="segIqama" cx="60" cy="60" r="50"></circle>
+                    <text class="center-text" x="60" y="60" id="textIqama">0</text>
+                </svg>
+                <div class="legend">
+                    <div class="legend-item"><span class="dot" style="background:#10b981"></span> <span id="lblValid">0 Valid</span></div>
+                    <div class="legend-item"><span class="dot" style="background:#f59e0b"></span> <span id="lblSoon">0 Expiring Soon</span></div>
+                    <div class="legend-item"><span class="dot" style="background:#ef4444"></span> <span id="lblExp">0 Expired</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Roster Grid Workspace -->
+    <div class="section-title">📊 Main Workspace Ledger</div>
+    <div class="table-wrapper">
+        <table id="rosterGrid">
             <thead>
-                <tr id="tableHeaders"></tr>
+                <tr id="gridHeaders"></tr>
             </thead>
-            <tbody id="tableRows"></tbody>
+            <tbody id="gridRows"></tbody>
         </table>
     </div>
 </div>
 
 <script>
-    let rawHeaders = [];
-    let rosterRecords = [];
+    let headersList = [];
+    let masterDataset = [];
+    let currentFilterTab = 'all'; // default view mode
 
-    // Auto-fetch data.csv directly from the GitHub repository on page load
+    // Fetch master CSV file automatically on application launch
     window.addEventListener('DOMContentLoaded', () => {
         fetch('data.csv')
-            .then(res => {
-                if (!res.ok) throw new Error();
-                return res.text();
-            })
-            .then(csvString => parseData(csvString))
-            .catch(() => {
-                document.getElementById('status').innerText = "Please upload your ARM CSV file to begin.";
-            });
+            .then(res => { if (!res.ok) throw new Error(); return res.text(); })
+            .then(csv => parseInputCSV(csv))
+            .catch(() => { document.getElementById('syncLabel').innerText = "Standby: Please choose a valid roster file to populate dashboard metrics."; });
     });
 
-    // Parse CSV Text
-    function parseData(csvText) {
-        document.getElementById('status').innerText = "Processing records...";
-        Papa.parse(csvText, {
+    function parseInputCSV(text) {
+        Papa.parse(text, {
             header: true,
             skipEmptyLines: true,
-            complete: function(parsed) {
-                rawHeaders = parsed.meta.fields;
-                rosterRecords = parsed.data;
-                renderDynamicTable(rosterRecords);
-                document.getElementById('status').innerText = `Loaded ${rosterRecords.length} employees.`;
+            complete: function(output) {
+                headersList = output.meta.fields;
+                masterDataset = output.data;
+                calculateMetrics();
+                processFilters();
             }
         });
     }
 
-    // Build the dynamic, editable grid
-    function renderDynamicTable(records) {
-        const headerContainer = document.getElementById('tableHeaders');
-        const rowContainer = document.getElementById('tableRows');
+    // High-performance Date & State Engine
+    function calculateMetrics() {
+        let total = masterDataset.length;
+        let expiredCount = 0;
+        let soonCount = 0;
+        let transferredCount = 0;
         
-        headerContainer.innerHTML = '';
-        rowContainer.innerHTML = '';
+        let txSent = 0, txDone = 0, txNone = 0;
+        let iqValid = 0;
 
-        if (!rawHeaders.length) return;
+        const currentYear = 2026;
+        const currentMonth = 7; // July 2026 reference baseline
+        const currentDate = new Date(currentYear, currentMonth - 1, 12);
 
-        // Populate headers
-        rawHeaders.forEach(col => {
-            const th = document.createElement('th');
-            th.innerText = col;
-            headerContainer.appendChild(th);
-        });
+        masterDataset.forEach(row => {
+            // 1. Calculate Iqama Expiry
+            if (row['Iqama Expiry']) {
+                const parts = row['Iqama Expiry'].split('/');
+                if(parts.length === 3) {
+                    const expiryDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                    const timeDiff = expiryDate - currentDate;
+                    const daysLeft = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
 
-        // Populate editable rows
-        records.forEach((record, index) => {
-            const tr = document.createElement('tr');
-            
-            rawHeaders.forEach(col => {
-                const td = document.createElement('td');
-                const cellInput = document.createElement('input');
-                cellInput.type = "text";
-                cellInput.value = record[col] || '';
-                
-                // Keep track of any typing edits on the fly
-                cellInput.addEventListener('change', (e) => {
-                    const trackingIndex = rosterRecords.indexOf(record);
-                    if (trackingIndex !== -1) {
-                        rosterRecords[trackingIndex][col] = e.target.value;
-                        document.getElementById('status').innerText = "Changes saved to memory! Ready to download.";
+                    if (daysLeft < 0) {
+                        row._iqamaState = 'expired';
+                        expiredCount++;
+                    } else if (daysLeft <= 30) {
+                        row._iqamaState = 'soon';
+                        soonCount++;
+                    } else {
+                        row._iqamaState = 'valid';
+                        iqValid++;
                     }
-                });
-
-                td.appendChild(cellInput);
-                tr.appendChild(td);
-            });
-            rowContainer.appendChild(tr);
-        });
-    }
-
-    // Target the specific Iqama column for super-fast search
-    function searchIqama() {
-        const query = document.getElementById('iqamaSearch').value.trim();
-        const rows = document.querySelectorAll('#tableRows tr');
-        
-        // Match both 'Iqama No' and 'Iqama Number' naming conventions
-        const iqamaKey = rawHeaders.find(key => key.toLowerCase().includes('iqama'));
-        const iqamaColIndex = rawHeaders.indexOf(iqamaKey);
-
-        rows.forEach(row => {
-            if (iqamaColIndex === -1) return;
-            
-            const fields = row.getElementsByTagName('input');
-            const targetField = fields[iqamaColIndex];
-            const iqamaValue = targetField.value.trim();
-
-            if (iqamaValue.includes(query)) {
-                row.style.display = "";
-                if (query !== "") {
-                    targetField.classList.add('highlight-match');
-                } else {
-                    targetField.classList.remove('highlight-match');
                 }
             } else {
-                row.style.display = "none";
-                targetField.classList.remove('highlight-match');
+                row._iqamaState = 'valid';
+                iqValid++;
             }
+
+            // 2. Parse Transfer Statuses
+            let tx = (row['Transfer Status'] || '').toLowerCase();
+            if (tx.includes('complete')) {
+                transferredCount++;
+                txDone++;
+            } else if (tx.includes('sent') || tx.includes('request')) {
+                txSent++;
+            } else {
+                txNone++;
+            }
+        });
+
+        // Set Metric Top Badges
+        document.getElementById('badgeTotal').innerText = `${total} workers`;
+        document.getElementById('badgeExpired').innerText = `${expiredCount} iqama expired`;
+        document.getElementById('badgeSoon').innerText = `${soonCount} iqama <30d`;
+        document.getElementById('badgeTransferred').innerText = `${transferredCount} transferred`;
+
+        // Draw Rings
+        updateVisualRing('segTransfer', 'textTransfer', total, txDone, '#10b981');
+        document.getElementById('lblSent').innerText = `${txSent} Transfer request sent`;
+        document.getElementById('lblDone').innerText = `${txDone} Transfer completed`;
+        document.getElementById('lblNeed').innerText = `${txNone} Need to send request`;
+
+        updateVisualRing('segIqama', 'textIqama', total, iqValid, '#10b981');
+        document.getElementById('lblValid').innerText = `${iqValid} Valid`;
+        document.getElementById('lblSoon').innerText = `${soonCount} Expiring Soon`;
+        document.getElementById('lblExp').innerText = `${expiredCount} Expired`;
+    }
+
+    function updateVisualRing(segId, textId, total, value, color) {
+        const seg = document.getElementById(segId);
+        document.getElementById(textId).textContent = total;
+        const radius = 50;
+        const circumference = 2 * Math.PI * radius;
+        seg.style.strokeDasharray = circumference;
+        
+        let percentage = total > 0 ? (value / total) : 0;
+        let offset = circumference - (percentage * circumference);
+        seg.style.strokeDashoffset = offset;
+        seg.style.stroke = color;
+    }
+
+    function switchTab(viewMode, element) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        element.classList.add('active');
+        currentFilterTab = viewMode;
+        processFilters();
+    }
+
+    // Handles layout visibility, tab updates, and live queries simultaneously
+    function processFilters() {
+        const searchVal = document.getElementById('masterSearch').value.toLowerCase().trim();
+        
+        let filteredData = masterDataset.filter(row => {
+            // Apply Tab Condition
+            if (currentFilterTab === 'expired' && row._iqamaState !== 'expired') return false;
+            if (currentFilterTab === 'soon' && row._iqamaState !== 'soon') return false;
+            if (currentFilterTab === 'sent' && !(row['Transfer Status'] || '').toLowerCase().includes('sent')) return false;
+            if (currentFilterTab === 'completed' && !(row['Transfer Status'] || '').toLowerCase().includes('complete')) return false;
+
+            // Apply Query Box Condition
+            if (searchVal !== '') {
+                let match = Object.values(row).some(v => String(v).toLowerCase().includes(searchVal));
+                if (!match) return false;
+            }
+            return true;
+        });
+
+        renderGridTable(filteredData);
+    }
+
+    function renderGridTable(dataArray) {
+        const trHead = document.getElementById('gridHeaders');
+        const trBody = document.getElementById('gridRows');
+        trHead.innerHTML = '';
+        trBody.innerHTML = '';
+
+        if(!headersList.length && dataArray.length > 0) {
+            headersList = Object.keys(dataArray[0]).filter(k => !k.startsWith('_'));
+        }
+
+        // Generate Sticky Header List
+        headersList.forEach(h => {
+            const th = document.createElement('th');
+            th.innerText = h;
+            trHead.appendChild(th);
+        });
+
+        // Generate Actionable Table Grid Inputs
+        dataArray.forEach(row => {
+            const tr = document.createElement('tr');
+            headersList.forEach(col => {
+                const td = document.createElement('td');
+                const boxInput = document.createElement('input');
+                boxInput.type = "text";
+                boxInput.value = row[col] || '';
+                
+                // Keep data array state synchronized on active keystroke changes
+                boxInput.addEventListener('change', (e) => {
+                    row[col] = e.target.value;
+                    calculateMetrics();
+                });
+
+                td.appendChild(boxInput);
+                tr.appendChild(td);
+            });
+            trBody.appendChild(tr);
         });
     }
 
-    // Local manual file import
-    function importCSV(e) {
-        const file = e.target.files[0];
+    function addNewWorkerRow() {
+        let newRecord = {};
+        headersList.forEach(h => newRecord[h] = '');
+        newRecord['Name'] = 'New Worker Record';
+        masterDataset.unshift(newRecord); // inject at top row workspace
+        calculateMetrics();
+        processFilters();
+    }
+
+    function handleFileUpload(event) {
+        const file = event.target.files[0];
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = function(evt) {
-            parseData(evt.target.result);
-        };
+        reader.onload = function(e) { parseInputCSV(e.target.result); };
         reader.readAsText(file);
     }
 
-    // Package current edited state and trigger user download
-    function exportCSV() {
-        if (!rosterRecords.length) {
-            alert("No data available to download.");
-            return;
-        }
-        const csvOutput = Papa.unparse({
-            fields: rawHeaders,
-            data: rosterRecords
+    function exportDataCSV() {
+        // Stripe parsing state flags before building raw text string
+        const outputCollection = masterDataset.map(item => {
+            let cleanObj = {};
+            headersList.forEach(h => cleanObj[h] = item[h] || '');
+            return cleanObj;
         });
-        
-        const blob = new Blob([csvOutput], { type: 'text/csv;charset=utf-8;' });
+
+        const csvString = Papa.unparse({ fields: headersList, data: outputCollection });
+        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
         const url = URL.createObjectURL(blob);
-        
         link.setAttribute("href", url);
-        link.setAttribute("download", "Updated_ARM_Workforce_Roster.csv");
-        link.style.visibility = 'hidden';
+        link.setAttribute("download", "ARM_Workforce_Roster_Updated.csv");
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
