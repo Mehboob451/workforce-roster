@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ARM Project - Workforce Roster</title>
-    <!-- PapaParse for robust CSV processing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     
     <style>
@@ -23,14 +22,86 @@
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             margin: 0;
-            padding: 24px;
+            padding: 0;
             background-color: var(--bg-color);
             color: var(--text-main);
+            min-height: 100vh;
         }
 
-        .container {
+        /* Login Screen Overlay */
+        #loginOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .login-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 32px;
+            width: 100%;
+            max-width: 380px;
+            text-align: center;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3);
+        }
+
+        .login-card h2 {
+            margin: 0 0 8px 0;
+            color: #ffffff;
+        }
+
+        .login-card p {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin: 0 0 24px 0;
+        }
+
+        .login-field {
+            width: 100%;
+            background-color: #0b0f19;
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            box-sizing: border-box;
+            margin-bottom: 16px;
+        }
+
+        .login-field:focus {
+            border-color: var(--accent-yellow);
+            outline: none;
+        }
+
+        .btn-login {
+            width: 100%;
+            background-color: var(--accent-yellow);
+            color: #000;
+            font-weight: bold;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+            transition: opacity 0.2s;
+        }
+        .btn-login:hover { opacity: 0.9; }
+        .login-error { color: var(--accent-red); font-size: 13px; margin-top: 12px; display: none; }
+
+        /* Main Dashboard Container */
+        .dashboard-container {
             max-width: 1400px;
             margin: 0 auto;
+            padding: 24px;
+            display: none; /* Shown after successful login */
         }
 
         .header-sub {
@@ -48,7 +119,7 @@
             font-weight: 800;
         }
 
-        /* Stats Summary Badges Row */
+        /* Stats Summary Row */
         .stats-bar {
             display: flex;
             flex-wrap: wrap;
@@ -108,10 +179,13 @@
             align-items: center;
             gap: 8px;
             transition: all 0.2s;
+            font-size: 14px;
         }
         .btn:hover { background-color: #334155; }
         .btn-add { background-color: var(--accent-yellow); color: #000; border: none; }
         .btn-add:hover { background-color: #d97706; }
+        .btn-save-git { background-color: var(--accent-green); color: #fff; border: none; }
+        .btn-save-git:hover { background-color: #059669; }
         
         .file-upload-wrapper { position: relative; overflow: hidden; display: inline-block; }
         .file-upload-wrapper input[type="file"] { position: absolute; left: 0; top: 0; opacity: 0; height: 100%; width: 100%; cursor: pointer; }
@@ -142,10 +216,10 @@
             color: #000;
         }
 
-        /* Analytics Grid Row */
+        /* Vertical Analytics Row - Pie Diagrams Stacked Vertically */
         .charts-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 24px;
             margin-bottom: 32px;
         }
@@ -154,15 +228,15 @@
             background-color: var(--card-bg);
             border: 1px solid var(--border-color);
             border-radius: 12px;
-            padding: 20px;
+            padding: 24px;
             display: flex;
             flex-direction: column;
             align-items: center;
+            text-align: center;
         }
 
         .chart-card h3 {
-            align-self: flex-start;
-            margin: 0 0 20px 0;
+            margin: 0 0 16px 0;
             font-size: 14px;
             text-transform: uppercase;
             color: var(--text-muted);
@@ -171,23 +245,77 @@
 
         .chart-flex {
             display: flex;
+            flex-direction: column;
             align-items: center;
-            justify-content: space-around;
+            justify-content: center;
             width: 100%;
             gap: 20px;
         }
 
-        /* SVG Donut Ring Styling */
         .donut-svg { width: 120px; height: 120px; transform: rotate(-90deg); }
-        .donut-bg { fill: none; stroke: #1f2937; stroke-width: 4; }
-        .donut-segment { fill: none; stroke-width: 4; stroke-linecap: round; }
-        .center-text { font-size: 24px; font-weight: bold; fill: #ffffff; text-anchor: middle; dominant-baseline: middle; }
+        .donut-bg { fill: none; stroke: #1f2937; stroke-width: 8; }
+        .donut-segment { fill: none; stroke-width: 8; stroke-linecap: round; }
+        .center-text { font-size: 22px; font-weight: bold; fill: #ffffff; text-anchor: middle; dominant-baseline: middle; }
 
-        .legend { display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
-        .legend-item { display: flex; align-items: center; gap: 8px; }
+        .legend { display: flex; flex-direction: column; gap: 10px; font-size: 13px; width: 100%; border-top: 1px solid var(--border-color); padding-top: 16px; }
+        .legend-item { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+        .legend-left { display: flex; align-items: center; gap: 8px; }
         .dot { width: 10px; height: 10px; border-radius: 50%; }
 
-        /* Spreadsheet Workspace Section - Expanded Text Setup */
+        /* Compact Card Grid View (Tab: Home) */
+        .card-grid-view {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .worker-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            position: relative;
+        }
+
+        .worker-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .worker-card-name {
+            font-weight: bold;
+            font-size: 15px;
+            color: #ffffff;
+        }
+
+        .worker-card-id {
+            font-size: 11px;
+            background-color: #1e293b;
+            color: var(--text-muted);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .worker-card-detail {
+            font-size: 13px;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px dashed #1f2937;
+            padding-bottom: 6px;
+        }
+
+        .worker-card-detail span:last-child {
+            color: #ffffff;
+            font-weight: 500;
+        }
+
+        /* Structured Spreadsheet Layout (Other Tabs) */
         .section-title {
             font-size: 18px;
             font-weight: 700;
@@ -213,79 +341,93 @@
         th {
             background-color: #1f2937;
             color: var(--text-main);
-            padding: 14px 12px;
+            padding: 12px 14px;
             font-weight: 600;
             position: sticky;
             top: 0;
             z-index: 10;
-            white-space: normal;
-            min-width: 140px;
-        }
-
-        /* Give specific space adjustments to wider text content fields */
-        th:nth-child(1), th:nth-child(9), th:nth-child(16) {
-            min-width: 220px;
+            white-space: nowrap;
+            border-bottom: 2px solid var(--border-color);
         }
 
         td {
-            padding: 4px;
+            padding: 0;
             border-bottom: 1px solid var(--border-color);
-            vertical-align: middle;
+            border-right: 1px solid var(--border-color);
         }
 
         tr:hover td { background-color: #1e293b; }
 
-        /* Make inputs clear and responsive to full layout text wrapping */
         td input {
             background: transparent;
-            border: 1px solid transparent;
+            border: none;
             color: white;
-            padding: 8px;
+            padding: 10px 14px;
             width: 100%;
             box-sizing: border-box;
-            border-radius: 4px;
             font-size: 13px;
         }
         
         td input:focus {
             background-color: #0b0f19;
-            border-color: var(--accent-yellow);
-            outline: none;
+            outline: 2px solid var(--accent-yellow);
+            outline-offset: -2px;
         }
+
+        /* Pill Badges */
+        .status-pill {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .pill-expired { background: rgba(239, 68, 68, 0.15); color: #fca5a5; }
+        .pill-soon { background: rgba(245, 158, 11, 0.15); color: #fde047; }
+        .pill-valid { background: rgba(16, 185, 129, 0.15); color: #6ee7b7; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div class="header-sub">ARM Project • Riyadh / Jeddah / Dammam</div>
+<div id="loginOverlay">
+    <div class="login-card">
+        <h2>ARM Workforce</h2>
+        <p>Enter your Administrator credentials</p>
+        <input type="text" id="usernameField" class="login-field" placeholder="User ID">
+        <input type="password" id="passwordField" class="login-field" placeholder="Password">
+        <button class="btn-login" onclick="attemptLogin()">Login</button>
+        <div id="loginError" class="login-error">Incorrect User ID or Password</div>
+    </div>
+</div>
+
+<div class="dashboard-container" id="mainDashboard">
+    <div class="header-sub">ARM Project • Workforce Management</div>
     <h1>Workforce Roster</h1>
 
-    <!-- Stats Summary Row -->
     <div class="stats-bar">
         <div class="stat-badge badge-workers" id="badgeTotal">0 workers</div>
         <div class="stat-badge badge-expired" id="badgeExpired">0 iqama expired</div>
         <div class="stat-badge badge-warning" id="badgeSoon">0 iqama &lt;30d</div>
         <div class="stat-badge badge-transferred" id="badgeTransferred">0 transferred</div>
-        <div style="margin-left: auto; align-self: center; font-size:12px; color:var(--text-muted);" id="syncLabel">Connected to GitHub Source</div>
+        <div style="margin-left: auto; align-self: center; font-size:12px; color:var(--text-muted);" id="syncLabel">Database active</div>
     </div>
 
-    <!-- Actions bar -->
     <div class="actions-row">
         <div class="search-container">
-            <input type="text" id="masterSearch" placeholder="Search name, ID, mobile, iqama..." oninput="processFilters()">
+            <input type="text" id="masterSearch" placeholder="Search by name, ID, mobile, iqama..." oninput="processFilters()">
         </div>
         
-        <button class="btn" onclick="exportDataCSV()">📥 Download CSV</button>
+        <button class="btn btn-save-git" onclick="saveDirectToGitHub()">💾 Save Direct to GitHub</button>
+        <button class="btn" onclick="exportDataCSV()">📥 Download Backup CSV</button>
         
         <div class="file-upload-wrapper">
-            <button class="btn">📤 Upload / Bulk Update</button>
+            <button class="btn">📤 Upload New CSV</button>
             <input type="file" accept=".csv" onchange="handleFileUpload(event)">
         </div>
 
         <button class="btn btn-add" onclick="addNewWorkerRow()">+ Add Worker</button>
     </div>
 
-    <!-- Filter Tabs -->
     <div class="tabs-container">
         <button class="tab active" onclick="switchTab('all', this)">Home</button>
         <button class="tab" onclick="switchTab('full', this)">Full Roster</button>
@@ -295,46 +437,63 @@
         <button class="tab" onclick="switchTab('completed', this)">Transfer Completed</button>
     </div>
 
-    <!-- Analytics Charts Row -->
     <div class="charts-grid" id="chartsSection">
-        <!-- Transfer Chart -->
         <div class="chart-card">
             <h3>Transfer Status</h3>
             <div class="chart-flex">
-                <svg class="donut-svg" id="svgTransfer">
+                <svg class="donut-svg">
                     <circle class="donut-bg" cx="60" cy="60" r="50"></circle>
                     <circle class="donut-segment" id="segTransfer" cx="60" cy="60" r="50"></circle>
                     <text class="center-text" x="60" y="60" id="textTransfer">0</text>
                 </svg>
                 <div class="legend">
-                    <div class="legend-item"><span class="dot" style="background:#3b82f6"></span> <span id="lblSent">0 Request sent</span></div>
-                    <div class="legend-item"><span class="dot" style="background:#10b981"></span> <span id="lblDone">0 Completed</span></div>
-                    <div class="legend-item"><span class="dot" style="background:#f59e0b"></span> <span id="lblNeed">0 Not requested</span></div>
+                    <div class="legend-item">
+                        <div class="legend-left"><span class="dot" style="background:var(--accent-blue)"></span><span>Transfer Sent</span></div>
+                        <strong id="lblSent">0</strong>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-left"><span class="dot" style="background:var(--accent-green)"></span><span>Completed</span></div>
+                        <strong id="lblDone">0</strong>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-left"><span class="dot" style="background:var(--accent-yellow)"></span><span>Not requested</span></div>
+                        <strong id="lblNeed">0</strong>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Iqama Chart -->
         <div class="chart-card">
             <h3>Iqama Status</h3>
             <div class="chart-flex">
-                <svg class="donut-svg" id="svgIqama">
+                <svg class="donut-svg">
                     <circle class="donut-bg" cx="60" cy="60" r="50"></circle>
                     <circle class="donut-segment" id="segIqama" cx="60" cy="60" r="50"></circle>
                     <text class="center-text" x="60" y="60" id="textIqama">0</text>
                 </svg>
                 <div class="legend">
-                    <div class="legend-item"><span class="dot" style="background:#10b981"></span> <span id="lblValid">0 Valid</span></div>
-                    <div class="legend-item"><span class="dot" style="background:#f59e0b"></span> <span id="lblSoon">0 Expiring Soon</span></div>
-                    <div class="legend-item"><span class="dot" style="background:#ef4444"></span> <span id="lblExp">0 Expired</span></div>
+                    <div class="legend-item">
+                        <div class="legend-left"><span class="dot" style="background:var(--accent-green)"></span><span>Valid</span></div>
+                        <strong id="lblValid">0</strong>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-left"><span class="dot" style="background:var(--accent-yellow)"></span><span>Expiring Soon</span></div>
+                        <strong id="lblSoon">0</strong>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-left"><span class="dot" style="background:var(--accent-red)"></span><span>Expired</span></div>
+                        <strong id="lblExp">0</strong>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Roster Grid Workspace -->
-    <div class="section-title">📊 Main Workspace Ledger</div>
-    <div class="table-wrapper">
+    <div class="section-title" id="workspaceTitle">📊 Main Workspace Ledger</div>
+    
+    <div class="card-grid-view" id="cardGridView" style="display: none;"></div>
+
+    <div class="table-wrapper" id="tableGridContainer">
         <table id="rosterGrid">
             <thead>
                 <tr id="gridHeaders"></tr>
@@ -345,16 +504,32 @@
 </div>
 
 <script>
+    // Embedded Token Configuration
+    const GITHUB_TOKEN = "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";
+    
     let headersList = [];
     let masterDataset = [];
     let currentFilterTab = 'all';
 
-    window.addEventListener('DOMContentLoaded', () => {
-        fetch('data.csv')
+    function attemptLogin() {
+        const u = document.getElementById('usernameField').value.trim();
+        const p = document.getElementById('passwordField').value.trim();
+        if(u === 'admin' && p === 'admin') {
+            document.getElementById('loginOverlay').style.display = 'none';
+            document.getElementById('mainDashboard').style.display = 'block';
+            loadMasterData();
+        } else {
+            document.getElementById('loginError').style.display = 'block';
+        }
+    }
+
+    function loadMasterData() {
+        const cacheBuster = new Date().getTime();
+        fetch(`data.csv?v=${cacheBuster}`)
             .then(res => { if (!res.ok) throw new Error(); return res.text(); })
             .then(csv => parseInputCSV(csv))
             .catch(() => { document.getElementById('syncLabel').innerText = "Standby: File data loading..."; });
-    });
+    }
 
     function parseInputCSV(text) {
         Papa.parse(text, {
@@ -378,7 +553,7 @@
         let txSent = 0, txDone = 0, txNone = 0;
         let iqValid = 0;
 
-        const currentDate = new Date(2026, 6, 12); // Reference July 12, 2026
+        const currentDate = new Date(2026, 6, 14); // Baseline date July 14, 2026
 
         masterDataset.forEach(row => {
             if (row['Iqama Expiry']) {
@@ -424,14 +599,14 @@
         document.getElementById('badgeTransferred').innerText = `${transferredCount} transferred`;
 
         updateVisualRing('segTransfer', 'textTransfer', total, txDone, '#10b981');
-        document.getElementById('lblSent').innerText = `${txSent} Transfer request sent`;
-        document.getElementById('lblDone').innerText = `${txDone} Transfer completed`;
-        document.getElementById('lblNeed').innerText = `${txNone} Need to send request`;
+        document.getElementById('lblSent').innerText = txSent;
+        document.getElementById('lblDone').innerText = txDone;
+        document.getElementById('lblNeed').innerText = txNone;
 
         updateVisualRing('segIqama', 'textIqama', total, iqValid, '#10b981');
-        document.getElementById('lblValid').innerText = `${iqValid} Valid`;
-        document.getElementById('lblSoon').innerText = `${soonCount} Expiring Soon`;
-        document.getElementById('lblExp').innerText = `${expiredCount} Expired`;
+        document.getElementById('lblValid').innerText = iqValid;
+        document.getElementById('lblSoon').innerText = soonCount;
+        document.getElementById('lblExp').innerText = expiredCount;
     }
 
     function updateVisualRing(segId, textId, total, value, color) {
@@ -470,7 +645,61 @@
             return true;
         });
 
-        renderGridTable(filteredData);
+        if(currentFilterTab === 'all') {
+            document.getElementById('workspaceTitle').innerText = "📇 Compact Employee Card Grid";
+            document.getElementById('tableGridContainer').style.display = 'none';
+            document.getElementById('cardGridView').style.display = 'grid';
+            renderCardTemplate(filteredData);
+        } else {
+            document.getElementById('workspaceTitle').innerText = "📊 Structured Ledger Workspace";
+            document.getElementById('cardGridView').style.display = 'none';
+            document.getElementById('tableGridContainer').style.display = 'block';
+            renderGridTable(filteredData);
+        }
+    }
+
+    function renderCardTemplate(dataArray) {
+        const cardBox = document.getElementById('cardGridView');
+        cardBox.innerHTML = '';
+
+        if(dataArray.length === 0) {
+            cardBox.innerHTML = '<div style="color:var(--text-muted); padding:20px;">No workers match filters.</div>';
+            return;
+        }
+
+        dataArray.forEach(row => {
+            const card = document.createElement('div');
+            card.className = 'worker-card';
+
+            let pillClass = 'pill-valid';
+            let pillLabel = 'Valid';
+            if(row._iqamaState === 'expired') { pillClass = 'pill-expired'; pillLabel = 'Expired'; }
+            else if(row._iqamaState === 'soon') { pillClass = 'pill-soon'; pillLabel = 'Soon'; }
+
+            card.innerHTML = `
+                <div class="worker-card-header">
+                    <div class="worker-card-name">${row['Name'] || 'No Name'}</div>
+                    <div class="worker-card-id">${row['Employee Number'] || '-'}</div>
+                </div>
+                <div class="worker-card-detail">
+                    <span>Profession</span>
+                    <span>${row['Profession'] || '-'}</span>
+                </div>
+                <div class="worker-card-detail">
+                    <span>Sponsor</span>
+                    <span>${row['Sponsor'] || '-'}</span>
+                </div>
+                <div class="worker-card-detail">
+                    <span>Iqama No</span>
+                    <span>${row['Iqama No'] || '-'}</span>
+                </div>
+                <div class="worker-card-detail">
+                    <span>Status</span>
+                    <span class="status-pill ${pillClass}">${pillLabel}</span>
+                </div>
+            `;
+            cardBox.appendChild(card);
+        });
     }
 
     function renderGridTable(dataArray) {
@@ -542,6 +771,70 @@
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+    }
+
+    // Custom Robust Unicode / UTF-8 Base64 conversion
+    function encodeUtf8ToBase64(str) {
+        const bytes = new TextEncoder().encode(str);
+        let binString = "";
+        for (let i = 0; i < bytes.length; i++) {
+            binString += String.fromCharCode(bytes[i]);
+        }
+        return btoa(binString);
+    }
+
+    // Direct GitHub push operation using GITHUB_TOKEN
+    async function saveDirectToGitHub() {
+        const token = GITHUB_TOKEN;
+        document.getElementById('syncLabel').innerText = "Saving changes directly to GitHub...";
+
+        const cleanRows = masterDataset.map(row => {
+            let cleanObj = {};
+            headersList.forEach(h => cleanObj[h] = row[h] || '');
+            return cleanObj;
+        });
+        const cleanCSV = Papa.unparse({ fields: headersList, data: cleanRows });
+
+        const repoOwner = "mehboob451";
+        const repoName = "workforce-roster";
+        const filePath = "data.csv";
+        const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePath}`;
+
+        try {
+            const getResponse = await fetch(apiUrl, {
+                headers: { "Authorization": `token ${token}` }
+            });
+            if(!getResponse.ok) throw new Error("Could not find data.csv metadata.");
+            const fileData = await getResponse.json();
+            const currentSha = fileData.sha;
+
+            // Generate clean base64 string using the updated UTF-8 encoder
+            const base64Content = encodeUtf8ToBase64(cleanCSV);
+
+            const putResponse = await fetch(apiUrl, {
+                method: "PUT",
+                headers: {
+                    "Authorization": `token ${token}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    message: "Auto-save from ARM Dashboard interface",
+                    content: base64Content,
+                    sha: currentSha
+                })
+            });
+
+            if(putResponse.ok) {
+                document.getElementById('syncLabel').innerText = "Saved successfully to GitHub! ✅";
+                alert("Saved and updated successfully!");
+            } else {
+                throw new Error("Commit failed.");
+            }
+        } catch(err) {
+            console.error(err);
+            document.getElementById('syncLabel').innerText = "Sync failed ❌";
+            alert("Auto-saving failed. Verify that your token is active and valid.");
+        }
     }
 </script>
 
