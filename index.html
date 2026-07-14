@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ARM Project - Workforce Roster</title>
-    <!-- PapaParse for robust CSV processing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     
     <style>
@@ -29,7 +28,7 @@
             min-height: 100vh;
         }
 
-        /* Login Screen Overlay */
+        /* Login Screen Overlay - Strictly ID & Password Only */
         #loginOverlay {
             position: fixed;
             top: 0;
@@ -43,18 +42,18 @@
             z-index: 9999;
         }
 
-        /* Custom Modal for PAT Token */
+        /* Custom Modal for PAT Token - High z-index to guarantee visibility */
         #patModalOverlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(11, 15, 25, 0.85);
+            background-color: rgba(11, 15, 25, 0.9);
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 10000;
+            z-index: 100000; /* Extremely high z-index to always stay on top */
         }
 
         .login-card {
@@ -65,7 +64,7 @@
             width: 100%;
             max-width: 380px;
             text-align: center;
-            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3);
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
         }
 
         .login-card h2, .login-card h3 {
@@ -77,6 +76,7 @@
             color: var(--text-muted);
             font-size: 14px;
             margin: 0 0 24px 0;
+            line-height: 1.4;
         }
 
         .login-field {
@@ -267,10 +267,29 @@
             gap: 20px;
         }
 
-        .donut-svg { width: 120px; height: 120px; transform: rotate(-90deg); }
-        .donut-bg { fill: none; stroke: #1f2937; stroke-width: 8; }
-        .donut-segment { fill: none; stroke-width: 8; stroke-linecap: round; }
-        .center-text { font-size: 22px; font-weight: bold; fill: #ffffff; text-anchor: middle; dominant-baseline: middle; }
+        /* Donut SVG styling - Text remains horizontal */
+        .donut-svg { 
+            width: 120px; 
+            height: 120px; 
+        } 
+        
+        /* Rotates only the graphical circles - preserving clean horizontal text alignment */
+        .donut-bg, .donut-segment { 
+            fill: none; 
+            stroke-width: 8; 
+            transform: rotate(-90deg); 
+            transform-origin: center;
+        }
+        .donut-bg { stroke: #1f2937; }
+        .donut-segment { stroke-linecap: round; }
+        
+        .center-text { 
+            font-size: 22px; 
+            font-weight: bold; 
+            fill: #ffffff; 
+            text-anchor: middle; 
+            dominant-baseline: middle; 
+        }
 
         .legend { display: flex; flex-direction: column; gap: 10px; font-size: 13px; width: 100%; border-top: 1px solid var(--border-color); padding-top: 16px; }
         .legend-item { display: flex; align-items: center; justify-content: space-between; width: 100%; }
@@ -404,7 +423,6 @@
 </head>
 <body>
 
-<!-- Login Page overlay (Clean & Standard Admin Login Only) -->
 <div id="loginOverlay">
     <div class="login-card">
         <h2>ARM Workforce</h2>
@@ -416,7 +434,6 @@
     </div>
 </div>
 
-<!-- PAT Modal Overlay (Triggered ONLY when saving) -->
 <div id="patModalOverlay" style="display: none;">
     <div class="login-card" style="max-width: 400px;">
         <h3>GitHub Authentication</h3>
@@ -429,12 +446,10 @@
     </div>
 </div>
 
-<!-- Main Dashboard -->
 <div class="dashboard-container" id="mainDashboard">
     <div class="header-sub">ARM Project • Workforce Management</div>
     <h1>Workforce Roster</h1>
 
-    <!-- Stats Summary Row -->
     <div class="stats-bar">
         <div class="stat-badge badge-workers" id="badgeTotal">0 workers</div>
         <div class="stat-badge badge-expired" id="badgeExpired">0 iqama expired</div>
@@ -443,7 +458,6 @@
         <div style="margin-left: auto; align-self: center; font-size:12px; color:var(--text-muted);" id="syncLabel">Database active</div>
     </div>
 
-    <!-- Actions bar -->
     <div class="actions-row">
         <div class="search-container">
             <input type="text" id="masterSearch" placeholder="Search by name, ID, mobile, iqama..." oninput="processFilters()">
@@ -460,7 +474,6 @@
         <button class="btn btn-add" onclick="addNewWorkerRow()">+ Add Worker</button>
     </div>
 
-    <!-- Filter Tabs -->
     <div class="tabs-container">
         <button class="tab active" onclick="switchTab('all', this)">Home</button>
         <button class="tab" onclick="switchTab('full', this)">Full Roster</button>
@@ -470,9 +483,7 @@
         <button class="tab" onclick="switchTab('completed', this)">Transfer Completed</button>
     </div>
 
-    <!-- Analytics Charts Row -->
     <div class="charts-grid" id="chartsSection">
-        <!-- Transfer Chart -->
         <div class="chart-card">
             <h3>Transfer Status</h3>
             <div class="chart-flex">
@@ -498,7 +509,6 @@
             </div>
         </div>
 
-        <!-- Iqama Chart -->
         <div class="chart-card">
             <h3>Iqama Status</h3>
             <div class="chart-flex">
@@ -525,13 +535,10 @@
         </div>
     </div>
 
-    <!-- Workspace Area -->
     <div class="section-title" id="workspaceTitle">📊 Main Workspace Ledger</div>
     
-    <!-- Dynamic Cards Grid View (Tab: Home) -->
     <div class="card-grid-view" id="cardGridView" style="display: none;"></div>
 
-    <!-- Dynamic Structured Spreadsheet Layout (Other Tabs) -->
     <div class="table-wrapper" id="tableGridContainer">
         <table id="rosterGrid">
             <thead>
@@ -546,7 +553,7 @@
     let headersList = [];
     let masterDataset = [];
     let currentFilterTab = 'all';
-    let localGitHubToken = ""; // Retained in session memory
+    let localGitHubToken = "";
 
     function attemptLogin() {
         const u = document.getElementById('usernameField').value.trim();
@@ -563,7 +570,6 @@
 
     function loadMasterData() {
         const cacheBuster = new Date().getTime();
-        // Pointing strictly to capital Data.csv
         fetch(`Data.csv?v=${cacheBuster}`)
             .then(res => { if (!res.ok) throw new Error(); return res.text(); })
             .then(csv => parseInputCSV(csv))
@@ -831,7 +837,7 @@
         const previouslySavedToken = localStorage.getItem('secure_git_token') || "";
         document.getElementById('modalPatField').value = previouslySavedToken;
         
-        // Open the modal popup
+        // Open the modal popup overlay cleanly
         document.getElementById('patModalOverlay').style.display = 'flex';
     }
 
@@ -847,11 +853,11 @@
             return;
         }
 
-        // Save it to memory and local storage so user doesn't have to re-enter it next time
+        // Save to memory and local storage so they don't have to write it again next time
         localStorage.setItem('secure_git_token', enteredToken);
         localGitHubToken = enteredToken;
 
-        // Hide the overlay popup
+        // Hide overlay popup
         closePatModal();
 
         // Run the main GitHub push process
