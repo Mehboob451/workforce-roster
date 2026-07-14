@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ARM Project - Workforce Roster</title>
+    <!-- PapaParse for robust CSV processing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     
     <style>
@@ -42,6 +43,20 @@
             z-index: 9999;
         }
 
+        /* Custom Modal for PAT Token */
+        #patModalOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(11, 15, 25, 0.85);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        }
+
         .login-card {
             background-color: var(--card-bg);
             border: 1px solid var(--border-color);
@@ -53,7 +68,7 @@
             box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3);
         }
 
-        .login-card h2 {
+        .login-card h2, .login-card h3 {
             margin: 0 0 8px 0;
             color: #ffffff;
         }
@@ -389,22 +404,37 @@
 </head>
 <body>
 
+<!-- Login Page overlay (Clean & Standard Admin Login Only) -->
 <div id="loginOverlay">
     <div class="login-card">
         <h2>ARM Workforce</h2>
         <p>Enter your Administrator credentials</p>
         <input type="text" id="usernameField" class="login-field" placeholder="User ID">
         <input type="password" id="passwordField" class="login-field" placeholder="Password">
-        <input type="password" id="tokenField" class="login-field" placeholder="GitHub Token (PAT)">
         <button class="btn-login" onclick="attemptLogin()">Secure Login</button>
-        <div id="loginError" class="login-error">Incorrect credentials or missing token</div>
+        <div id="loginError" class="login-error">Incorrect credentials</div>
     </div>
 </div>
 
+<!-- PAT Modal Overlay (Triggered ONLY when saving) -->
+<div id="patModalOverlay" style="display: none;">
+    <div class="login-card" style="max-width: 400px;">
+        <h3>GitHub Authentication</h3>
+        <p style="margin-bottom: 16px;">Type or paste your GitHub Personal Access Token (PAT) below to write changes to your repository.</p>
+        <input type="password" id="modalPatField" class="login-field" placeholder="Paste your GitHub Token (github_pat_...)">
+        <div style="display: flex; gap: 12px;">
+            <button class="btn" style="flex: 1; background: #374151;" onclick="closePatModal()">Cancel</button>
+            <button class="btn btn-save-git" style="flex: 1;" onclick="confirmSaveWithPat()">Save now</button>
+        </div>
+    </div>
+</div>
+
+<!-- Main Dashboard -->
 <div class="dashboard-container" id="mainDashboard">
     <div class="header-sub">ARM Project • Workforce Management</div>
     <h1>Workforce Roster</h1>
 
+    <!-- Stats Summary Row -->
     <div class="stats-bar">
         <div class="stat-badge badge-workers" id="badgeTotal">0 workers</div>
         <div class="stat-badge badge-expired" id="badgeExpired">0 iqama expired</div>
@@ -413,12 +443,13 @@
         <div style="margin-left: auto; align-self: center; font-size:12px; color:var(--text-muted);" id="syncLabel">Database active</div>
     </div>
 
+    <!-- Actions bar -->
     <div class="actions-row">
         <div class="search-container">
             <input type="text" id="masterSearch" placeholder="Search by name, ID, mobile, iqama..." oninput="processFilters()">
         </div>
         
-        <button class="btn btn-save-git" onclick="saveDirectToGitHub()">💾 Save Direct to GitHub</button>
+        <button class="btn btn-save-git" onclick="openPatModalToSave()">💾 Save Direct to GitHub</button>
         <button class="btn" onclick="exportDataCSV()">📥 Download Backup CSV</button>
         
         <div class="file-upload-wrapper">
@@ -429,6 +460,7 @@
         <button class="btn btn-add" onclick="addNewWorkerRow()">+ Add Worker</button>
     </div>
 
+    <!-- Filter Tabs -->
     <div class="tabs-container">
         <button class="tab active" onclick="switchTab('all', this)">Home</button>
         <button class="tab" onclick="switchTab('full', this)">Full Roster</button>
@@ -438,7 +470,9 @@
         <button class="tab" onclick="switchTab('completed', this)">Transfer Completed</button>
     </div>
 
+    <!-- Analytics Charts Row -->
     <div class="charts-grid" id="chartsSection">
+        <!-- Transfer Chart -->
         <div class="chart-card">
             <h3>Transfer Status</h3>
             <div class="chart-flex">
@@ -464,6 +498,7 @@
             </div>
         </div>
 
+        <!-- Iqama Chart -->
         <div class="chart-card">
             <h3>Iqama Status</h3>
             <div class="chart-flex">
@@ -490,10 +525,13 @@
         </div>
     </div>
 
+    <!-- Workspace Area -->
     <div class="section-title" id="workspaceTitle">📊 Main Workspace Ledger</div>
     
+    <!-- Dynamic Cards Grid View (Tab: Home) -->
     <div class="card-grid-view" id="cardGridView" style="display: none;"></div>
 
+    <!-- Dynamic Structured Spreadsheet Layout (Other Tabs) -->
     <div class="table-wrapper" id="tableGridContainer">
         <table id="rosterGrid">
             <thead>
@@ -508,26 +546,13 @@
     let headersList = [];
     let masterDataset = [];
     let currentFilterTab = 'all';
-    let localGitHubToken = ""; // Retrieved and stored securely in memory
-
-    // Check if a token has been saved in this browser before
-    window.onload = function() {
-        const savedToken = localStorage.getItem('secure_git_token');
-        if(savedToken) {
-            document.getElementById('tokenField').value = savedToken;
-        }
-    }
+    let localGitHubToken = ""; // Retained in session memory
 
     function attemptLogin() {
         const u = document.getElementById('usernameField').value.trim();
         const p = document.getElementById('passwordField').value.trim();
-        const t = document.getElementById('tokenField').value.trim();
         
-        if(u === 'admin' && p === 'admin' && t !== '') {
-            // Save token securely in user's browser storage
-            localStorage.setItem('secure_git_token', t);
-            localGitHubToken = t;
-            
+        if(u === 'admin' && p === 'admin') {
             document.getElementById('loginOverlay').style.display = 'none';
             document.getElementById('mainDashboard').style.display = 'block';
             loadMasterData();
@@ -538,7 +563,7 @@
 
     function loadMasterData() {
         const cacheBuster = new Date().getTime();
-        // Pointing strictly to uppercase Data.csv
+        // Pointing strictly to capital Data.csv
         fetch(`Data.csv?v=${cacheBuster}`)
             .then(res => { if (!res.ok) throw new Error(); return res.text(); })
             .then(csv => parseInputCSV(csv))
@@ -800,13 +825,41 @@
         return btoa(binString);
     }
 
-    async function saveDirectToGitHub() {
-        const token = localGitHubToken;
-        if (!token) {
-            alert("Security Error: No GitHub Token found. Please log in again.");
+    /* PAT MODAL LOGIC */
+    function openPatModalToSave() {
+        // Pre-fill the modal input box with any saved token from local storage
+        const previouslySavedToken = localStorage.getItem('secure_git_token') || "";
+        document.getElementById('modalPatField').value = previouslySavedToken;
+        
+        // Open the modal popup
+        document.getElementById('patModalOverlay').style.display = 'flex';
+    }
+
+    function closePatModal() {
+        document.getElementById('patModalOverlay').style.display = 'none';
+    }
+
+    async function confirmSaveWithPat() {
+        const enteredToken = document.getElementById('modalPatField').value.trim();
+        
+        if (!enteredToken) {
+            alert("A valid GitHub Token (PAT) is required to save modifications directly.");
             return;
         }
 
+        // Save it to memory and local storage so user doesn't have to re-enter it next time
+        localStorage.setItem('secure_git_token', enteredToken);
+        localGitHubToken = enteredToken;
+
+        // Hide the overlay popup
+        closePatModal();
+
+        // Run the main GitHub push process
+        await executeGitHubPush();
+    }
+
+    async function executeGitHubPush() {
+        const token = localGitHubToken;
         document.getElementById('syncLabel').innerText = "Saving changes directly to GitHub...";
 
         const cleanRows = masterDataset.map(row => {
@@ -818,7 +871,7 @@
 
         const repoOwner = "mehboob451";
         const repoName = "workforce-roster";
-        const filePath = "Data.csv"; // Pointing strictly to uppercase Data.csv
+        const filePath = "Data.csv"; 
         const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePath}`;
 
         let currentSha = null;
@@ -860,7 +913,7 @@
         } catch(err) {
             console.error(err);
             document.getElementById('syncLabel').innerText = "Sync failed ❌";
-            alert("Auto-saving failed. Verify that your token is active and valid.");
+            alert("Auto-saving failed. Verify that your token is active and valid, or enter a new one.");
         }
     }
 </script>
