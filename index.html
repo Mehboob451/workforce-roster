@@ -216,7 +216,7 @@
             color: #000;
         }
 
-        /* Vertical Analytics Row - Pie Diagrams Stacked Vertically */
+        /* Charts Layout */
         .charts-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -315,7 +315,7 @@
             font-weight: 500;
         }
 
-        /* Structured Spreadsheet Layout (Other Tabs) */
+        /* Structured Spreadsheet Layout */
         .section-title {
             font-size: 18px;
             font-weight: 700;
@@ -525,10 +525,11 @@
 
     function loadMasterData() {
         const cacheBuster = new Date().getTime();
-        fetch(`data.csv?v=${cacheBuster}`)
+        // Updated file target to exactly match 'Data.csv' (capital D)
+        fetch(`Data.csv?v=${cacheBuster}`)
             .then(res => { if (!res.ok) throw new Error(); return res.text(); })
             .then(csv => parseInputCSV(csv))
-            .catch(() => { document.getElementById('syncLabel').innerText = "Standby: File data loading..."; });
+            .catch(() => { document.getElementById('syncLabel').innerText = "Standby: No Data.csv found. Ready to upload a backup or create rows."; });
     }
 
     function parseInputCSV(text) {
@@ -708,8 +709,8 @@
         trHead.innerHTML = '';
         trBody.innerHTML = '';
 
-        if(!headersList.length && dataArray.length > 0) {
-            headersList = Object.keys(dataArray[0]).filter(k => !k.startsWith('_'));
+        if(!headersList || !headersList.length) {
+            headersList = ['Name', 'Profession', 'Employee Number', 'Sponsor', 'Project', 'Nationality', 'Batch No', 'Location', 'Google Location (address or maps link)', 'Petrol Pump Station No', 'Iqama No', 'Iqama Expiry', 'Mobile Number', 'Basic Salary', 'Food Allowance', 'Transfer Status', 'Note', 'T-Shirt', 'Pant', 'Shoes', 'Last Updated'];
         }
 
         headersList.forEach(h => {
@@ -740,6 +741,9 @@
 
     function addNewWorkerRow() {
         let newRecord = {};
+        if(!headersList || !headersList.length) {
+            headersList = ['Name', 'Profession', 'Employee Number', 'Sponsor', 'Project', 'Nationality', 'Batch No', 'Location', 'Google Location (address or maps link)', 'Petrol Pump Station No', 'Iqama No', 'Iqama Expiry', 'Mobile Number', 'Basic Salary', 'Food Allowance', 'Transfer Status', 'Note', 'T-Shirt', 'Pant', 'Shoes', 'Last Updated'];
+        }
         headersList.forEach(h => newRecord[h] = '');
         newRecord['Name'] = 'New Worker Record';
         masterDataset.unshift(newRecord);
@@ -773,7 +777,6 @@
         document.body.removeChild(link);
     }
 
-    // Custom Robust Unicode / UTF-8 Base64 conversion
     function encodeUtf8ToBase64(str) {
         const bytes = new TextEncoder().encode(str);
         let binString = "";
@@ -783,7 +786,6 @@
         return btoa(binString);
     }
 
-    // Direct GitHub push operation using GITHUB_TOKEN
     async function saveDirectToGitHub() {
         const token = GITHUB_TOKEN;
         document.getElementById('syncLabel').innerText = "Saving changes directly to GitHub...";
@@ -797,19 +799,29 @@
 
         const repoOwner = "mehboob451";
         const repoName = "workforce-roster";
-        const filePath = "data.csv";
+        const filePath = "Data.csv"; // Capitalized filename target
         const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePath}`;
+
+        let currentSha = null;
 
         try {
             const getResponse = await fetch(apiUrl, {
                 headers: { "Authorization": `token ${token}` }
             });
-            if(!getResponse.ok) throw new Error("Could not find data.csv metadata.");
-            const fileData = await getResponse.json();
-            const currentSha = fileData.sha;
-
-            // Generate clean base64 string using the updated UTF-8 encoder
+            
+            if (getResponse.ok) {
+                const fileData = await getResponse.json();
+                currentSha = fileData.sha;
+            }
+            
             const base64Content = encodeUtf8ToBase64(cleanCSV);
+            const payload = {
+                message: "Auto-save from ARM Dashboard interface",
+                content: base64Content
+            };
+            if (currentSha) {
+                payload.sha = currentSha;
+            }
 
             const putResponse = await fetch(apiUrl, {
                 method: "PUT",
@@ -817,14 +829,10 @@
                     "Authorization": `token ${token}`,
                     "Content-Type": "application/json"
                 },
-                body: JSON.stringify({
-                    message: "Auto-save from ARM Dashboard interface",
-                    content: base64Content,
-                    sha: currentSha
-                })
+                body: JSON.stringify(payload)
             });
 
-            if(putResponse.ok) {
+            if (putResponse.ok) {
                 document.getElementById('syncLabel').innerText = "Saved successfully to GitHub! ✅";
                 alert("Saved and updated successfully!");
             } else {
