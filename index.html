@@ -42,18 +42,18 @@
             z-index: 9999;
         }
 
-        /* Custom Modal for PAT Token - High z-index to guarantee visibility */
+        /* Custom Modal for PAT Token - Hidden by default to prevent overlapping login */
         #patModalOverlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(11, 15, 25, 0.9);
-            display: flex;
+            background-color: rgba(11, 15, 25, 0.95);
+            display: none; /* Keep hidden on load */
             justify-content: center;
             align-items: center;
-            z-index: 100000; /* Extremely high z-index to always stay on top */
+            z-index: 100000;
         }
 
         .login-card {
@@ -267,18 +267,16 @@
             gap: 20px;
         }
 
-        /* Donut SVG styling - Text remains horizontal */
+        /* Donut SVG styling - Keeping numbers strictly horizontal */
         .donut-svg { 
             width: 120px; 
             height: 120px; 
         } 
         
-        /* Rotates only the graphical circles - preserving clean horizontal text alignment */
         .donut-bg, .donut-segment { 
             fill: none; 
             stroke-width: 8; 
-            transform: rotate(-90deg); 
-            transform-origin: center;
+            /* We handle the rotation in SVG attributes directly now to avoid browser text rotation bugs */
         }
         .donut-bg { stroke: #1f2937; }
         .donut-segment { stroke-linecap: round; }
@@ -434,7 +432,7 @@
     </div>
 </div>
 
-<div id="patModalOverlay" style="display: none;">
+<div id="patModalOverlay">
     <div class="login-card" style="max-width: 400px;">
         <h3>GitHub Authentication</h3>
         <p style="margin-bottom: 16px;">Type or paste your GitHub Personal Access Token (PAT) below to write changes to your repository.</p>
@@ -488,8 +486,8 @@
             <h3>Transfer Status</h3>
             <div class="chart-flex">
                 <svg class="donut-svg">
-                    <circle class="donut-bg" cx="60" cy="60" r="50"></circle>
-                    <circle class="donut-segment" id="segTransfer" cx="60" cy="60" r="50"></circle>
+                    <circle class="donut-bg" cx="60" cy="60" r="50" transform="rotate(-90 60 60)"></circle>
+                    <circle class="donut-segment" id="segTransfer" cx="60" cy="60" r="50" transform="rotate(-90 60 60)"></circle>
                     <text class="center-text" x="60" y="60" id="textTransfer">0</text>
                 </svg>
                 <div class="legend">
@@ -513,8 +511,8 @@
             <h3>Iqama Status</h3>
             <div class="chart-flex">
                 <svg class="donut-svg">
-                    <circle class="donut-bg" cx="60" cy="60" r="50"></circle>
-                    <circle class="donut-segment" id="segIqama" cx="60" cy="60" r="50"></circle>
+                    <circle class="donut-bg" cx="60" cy="60" r="50" transform="rotate(-90 60 60)"></circle>
+                    <circle class="donut-segment" id="segIqama" cx="60" cy="60" r="50" transform="rotate(-90 60 60)"></circle>
                     <text class="center-text" x="60" y="60" id="textIqama">0</text>
                 </svg>
                 <div class="legend">
