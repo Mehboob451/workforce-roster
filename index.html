@@ -203,7 +203,7 @@
         .btn-save-git:hover { background-color: #059669; }
         
         .file-upload-wrapper { position: relative; overflow: hidden; display: inline-block; }
-        .file-upload-wrapper input[type="file"] { position: absolute; left: 0; top: 0; opacity: 0; height: 100%; width: 100%; cursor: pointer; }
+        .file-upload-wrapper input[type="file"] { position: absolute; left: 0; top: 0; opacity: 0; height: 100%; width: 100%; cursor: pointer; width: 100%; }
 
         /* Navigation Tabs */
         .tabs-container {
@@ -267,7 +267,7 @@
             gap: 20px;
         }
 
-        /* Donut SVG styling - Keeping numbers strictly horizontal */
+        /* Donut SVG styling */
         .donut-svg { 
             width: 120px; 
             height: 120px; 
@@ -276,7 +276,6 @@
         .donut-bg, .donut-segment { 
             fill: none; 
             stroke-width: 8; 
-            /* We handle the rotation in SVG attributes directly now to avoid browser text rotation bugs */
         }
         .donut-bg { stroke: #1f2937; }
         .donut-segment { stroke-linecap: round; }
@@ -665,7 +664,6 @@
         seg.style.stroke = color;
     }
 
-    // Tab Navigation Logic
     function switchTab(viewMode, element) {
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         element.classList.add('active');
@@ -829,13 +827,9 @@
         return btoa(binString);
     }
 
-    /* PAT MODAL LOGIC */
     function openPatModalToSave() {
-        // Pre-fill the modal input box with any saved token from local storage
         const previouslySavedToken = localStorage.getItem('secure_git_token') || "";
         document.getElementById('modalPatField').value = previouslySavedToken;
-        
-        // Open the modal popup overlay cleanly
         document.getElementById('patModalOverlay').style.display = 'flex';
     }
 
@@ -845,20 +839,13 @@
 
     async function confirmSaveWithPat() {
         const enteredToken = document.getElementById('modalPatField').value.trim();
-        
         if (!enteredToken) {
-            alert("A valid GitHub Token (PAT) is required to save modifications directly.");
+            alert("A valid GitHub Token (PAT) is required.");
             return;
         }
-
-        // Save to memory and local storage so they don't have to write it again next time
         localStorage.setItem('secure_git_token', enteredToken);
         localGitHubToken = enteredToken;
-
-        // Hide overlay popup
         closePatModal();
-
-        // Run the main GitHub push process
         await executeGitHubPush();
     }
 
@@ -885,10 +872,14 @@
                 headers: { "Authorization": `token ${token}` }
             });
             
-            if (getResponse.ok) {
-                const fileData = await getResponse.json();
-                currentSha = fileData.sha;
+            if (!getResponse.ok) {
+                const errData = await getResponse.json().catch(() => ({}));
+                const reason = errData.message || `Status Code ${getResponse.status}`;
+                throw new Error(`Failed to read existing Data.csv status. Reason: ${reason}`);
             }
+
+            const fileData = await getResponse.json();
+            currentSha = fileData.sha;
             
             const base64Content = encodeUtf8ToBase64(cleanCSV);
             const payload = {
@@ -912,12 +903,14 @@
                 document.getElementById('syncLabel').innerText = "Saved successfully to GitHub! ✅";
                 alert("Saved and updated successfully!");
             } else {
-                throw new Error("Commit failed.");
+                const putErrData = await putResponse.json().catch(() => ({}));
+                const putReason = putErrData.message || `Status Code ${putResponse.status}`;
+                throw new Error(`Write failed. Reason: ${putReason}`);
             }
         } catch(err) {
             console.error(err);
             document.getElementById('syncLabel').innerText = "Sync failed ❌";
-            alert("Auto-saving failed. Verify that your token is active and valid, or enter a new one.");
+            alert(`Auto-saving failed!\n\nDetails: ${err.message}`);
         }
     }
 </script>
