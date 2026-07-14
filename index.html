@@ -262,7 +262,7 @@
         .legend-left { display: flex; align-items: center; gap: 8px; }
         .dot { width: 10px; height: 10px; border-radius: 50%; }
 
-        /* Compact Card Grid View (Tab: Home) */
+        /* Compact Card Grid View */
         .card-grid-view {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -395,8 +395,9 @@
         <p>Enter your Administrator credentials</p>
         <input type="text" id="usernameField" class="login-field" placeholder="User ID">
         <input type="password" id="passwordField" class="login-field" placeholder="Password">
-        <button class="btn-login" onclick="attemptLogin()">Login</button>
-        <div id="loginError" class="login-error">Incorrect User ID or Password</div>
+        <input type="password" id="tokenField" class="login-field" placeholder="GitHub Token (PAT)">
+        <button class="btn-login" onclick="attemptLogin()">Secure Login</button>
+        <div id="loginError" class="login-error">Incorrect credentials or missing token</div>
     </div>
 </div>
 
@@ -504,17 +505,29 @@
 </div>
 
 <script>
-    // Embedded Token Configuration
-    const GITHUB_TOKEN = "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";
-    
     let headersList = [];
     let masterDataset = [];
     let currentFilterTab = 'all';
+    let localGitHubToken = ""; // Retrieved and stored securely in memory
+
+    // Check if a token has been saved in this browser before
+    window.onload = function() {
+        const savedToken = localStorage.getItem('secure_git_token');
+        if(savedToken) {
+            document.getElementById('tokenField').value = savedToken;
+        }
+    }
 
     function attemptLogin() {
         const u = document.getElementById('usernameField').value.trim();
         const p = document.getElementById('passwordField').value.trim();
-        if(u === 'admin' && p === 'admin') {
+        const t = document.getElementById('tokenField').value.trim();
+        
+        if(u === 'admin' && p === 'admin' && t !== '') {
+            // Save token securely in user's browser storage
+            localStorage.setItem('secure_git_token', t);
+            localGitHubToken = t;
+            
             document.getElementById('loginOverlay').style.display = 'none';
             document.getElementById('mainDashboard').style.display = 'block';
             loadMasterData();
@@ -525,7 +538,7 @@
 
     function loadMasterData() {
         const cacheBuster = new Date().getTime();
-        // Updated file target to exactly match 'Data.csv' (capital D)
+        // Pointing strictly to uppercase Data.csv
         fetch(`Data.csv?v=${cacheBuster}`)
             .then(res => { if (!res.ok) throw new Error(); return res.text(); })
             .then(csv => parseInputCSV(csv))
@@ -623,6 +636,7 @@
         seg.style.stroke = color;
     }
 
+    // Tab Navigation Logic
     function switchTab(viewMode, element) {
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         element.classList.add('active');
@@ -787,7 +801,12 @@
     }
 
     async function saveDirectToGitHub() {
-        const token = GITHUB_TOKEN;
+        const token = localGitHubToken;
+        if (!token) {
+            alert("Security Error: No GitHub Token found. Please log in again.");
+            return;
+        }
+
         document.getElementById('syncLabel').innerText = "Saving changes directly to GitHub...";
 
         const cleanRows = masterDataset.map(row => {
@@ -799,7 +818,7 @@
 
         const repoOwner = "mehboob451";
         const repoName = "workforce-roster";
-        const filePath = "Data.csv"; // Capitalized filename target
+        const filePath = "Data.csv"; // Pointing strictly to uppercase Data.csv
         const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePath}`;
 
         let currentSha = null;
