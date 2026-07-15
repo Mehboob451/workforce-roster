@@ -28,7 +28,6 @@
             min-height: 100vh;
         }
 
-        /* Login Screen Overlay - Strictly ID & Password Only */
         #loginOverlay {
             position: fixed;
             top: 0;
@@ -42,7 +41,6 @@
             z-index: 9999;
         }
 
-        /* Custom Modal for PAT Token - Hidden by default to prevent overlapping login */
         #patModalOverlay {
             position: fixed;
             top: 0;
@@ -50,7 +48,7 @@
             width: 100%;
             height: 100%;
             background-color: rgba(11, 15, 25, 0.95);
-            display: none; /* Keep hidden on load */
+            display: none;
             justify-content: center;
             align-items: center;
             z-index: 100000;
@@ -111,12 +109,11 @@
         .btn-login:hover { opacity: 0.9; }
         .login-error { color: var(--accent-red); font-size: 13px; margin-top: 12px; display: none; }
 
-        /* Main Dashboard Container */
         .dashboard-container {
             max-width: 1400px;
             margin: 0 auto;
             padding: 24px;
-            display: none; /* Shown after successful login */
+            display: none;
         }
 
         .header-sub {
@@ -134,7 +131,6 @@
             font-weight: 800;
         }
 
-        /* Stats Summary Row */
         .stats-bar {
             display: flex;
             flex-wrap: wrap;
@@ -157,7 +153,6 @@
         .badge-warning { background: rgba(245, 158, 11, 0.15); color: #fde047; border-color: rgba(245, 158, 11, 0.3); }
         .badge-transferred { background: rgba(16, 185, 129, 0.15); color: #6ee7b7; border-color: rgba(16, 185, 129, 0.3); }
 
-        /* Actions Row */
         .actions-row {
             display: flex;
             flex-wrap: wrap;
@@ -203,9 +198,8 @@
         .btn-save-git:hover { background-color: #059669; }
         
         .file-upload-wrapper { position: relative; overflow: hidden; display: inline-block; }
-        .file-upload-wrapper input[type="file"] { position: absolute; left: 0; top: 0; opacity: 0; height: 100%; width: 100%; cursor: pointer; width: 100%; }
+        .file-upload-wrapper input[type="file"] { position: absolute; left: 0; top: 0; opacity: 0; height: 100%; width: 100%; cursor: pointer; }
 
-        /* Navigation Tabs */
         .tabs-container {
             display: flex;
             gap: 8px;
@@ -231,7 +225,6 @@
             color: #000;
         }
 
-        /* Charts Layout */
         .charts-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -267,7 +260,6 @@
             gap: 20px;
         }
 
-        /* Donut SVG styling */
         .donut-svg { 
             width: 120px; 
             height: 120px; 
@@ -293,7 +285,6 @@
         .legend-left { display: flex; align-items: center; gap: 8px; }
         .dot { width: 10px; height: 10px; border-radius: 50%; }
 
-        /* Compact Card Grid View */
         .card-grid-view {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -346,7 +337,6 @@
             font-weight: 500;
         }
 
-        /* Structured Spreadsheet Layout */
         .section-title {
             font-size: 18px;
             font-weight: 700;
@@ -405,7 +395,6 @@
             outline-offset: -2px;
         }
 
-        /* Pill Badges */
         .status-pill {
             display: inline-block;
             padding: 2px 8px;
@@ -449,7 +438,7 @@
 
     <div class="stats-bar">
         <div class="stat-badge badge-workers" id="badgeTotal">0 workers</div>
-        <div class="stat-badge badge-expired" id="badgeExpired">0 iqama expired</div>
+        <div class="stat-badge badge-expired" id="badgeExpired">0 under renewal</div>
         <div class="stat-badge badge-warning" id="badgeSoon">0 iqama &lt;30d</div>
         <div class="stat-badge badge-transferred" id="badgeTransferred">0 transferred</div>
         <div style="margin-left: auto; align-self: center; font-size:12px; color:var(--text-muted);" id="syncLabel">Database active</div>
@@ -474,7 +463,7 @@
     <div class="tabs-container">
         <button class="tab active" onclick="switchTab('all', this)">Home</button>
         <button class="tab" onclick="switchTab('full', this)">Full Roster</button>
-        <button class="tab" onclick="switchTab('expired', this)">Expired Iqama</button>
+        <button class="tab" onclick="switchTab('expired', this)">Under Renewal</button>
         <button class="tab" onclick="switchTab('soon', this)">Expiring Soon</button>
         <button class="tab" onclick="switchTab('sent', this)">Transfer Sent</button>
         <button class="tab" onclick="switchTab('completed', this)">Transfer Completed</button>
@@ -524,7 +513,7 @@
                         <strong id="lblSoon">0</strong>
                     </div>
                     <div class="legend-item">
-                        <div class="legend-left"><span class="dot" style="background:var(--accent-red)"></span><span>Expired</span></div>
+                        <div class="legend-left"><span class="dot" style="background:var(--accent-red)"></span><span>Under Renewal</span></div>
                         <strong id="lblExp">0</strong>
                     </div>
                 </div>
@@ -533,7 +522,6 @@
     </div>
 
     <div class="section-title" id="workspaceTitle">📊 Main Workspace Ledger</div>
-    
     <div class="card-grid-view" id="cardGridView" style="display: none;"></div>
 
     <div class="table-wrapper" id="tableGridContainer">
@@ -570,7 +558,7 @@
         fetch(`Data.csv?v=${cacheBuster}`)
             .then(res => { if (!res.ok) throw new Error(); return res.text(); })
             .then(csv => parseInputCSV(csv))
-            .catch(() => { document.getElementById('syncLabel').innerText = "Standby: No Data.csv found. Ready to upload a backup or create rows."; });
+            .catch(() => { document.getElementById('syncLabel').innerText = "Standby: No Data.csv found."; });
     }
 
     function parseInputCSV(text) {
@@ -591,11 +579,9 @@
         let expiredCount = 0;
         let soonCount = 0;
         let transferredCount = 0;
-        
-        let txSent = 0, txDone = 0, txNone = 0;
-        let iqValid = 0;
+        let txSent = 0, txDone = 0, txNone = 0, iqValid = 0;
 
-        const currentDate = new Date(2026, 6, 14); // Baseline date July 14, 2026
+        const currentDate = new Date(2026, 6, 14);
 
         masterDataset.forEach(row => {
             if (row['Iqama Expiry']) {
@@ -605,38 +591,20 @@
                     const timeDiff = expiryDate - currentDate;
                     const daysLeft = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
 
-                    if (daysLeft < 0) {
-                        row._iqamaState = 'expired';
-                        expiredCount++;
-                    } else if (daysLeft <= 30) {
-                        row._iqamaState = 'soon';
-                        soonCount++;
-                    } else {
-                        row._iqamaState = 'valid';
-                        iqValid++;
-                    }
-                } else {
-                    row._iqamaState = 'valid';
-                    iqValid++;
-                }
-            } else {
-                row._iqamaState = 'valid';
-                iqValid++;
-            }
+                    if (daysLeft < 0) { row._iqamaState = 'expired'; expiredCount++; }
+                    else if (daysLeft <= 30) { row._iqamaState = 'soon'; soonCount++; }
+                    else { row._iqamaState = 'valid'; iqValid++; }
+                } else { row._iqamaState = 'valid'; iqValid++; }
+            } else { row._iqamaState = 'valid'; iqValid++; }
 
             let tx = (row['Transfer Status'] || '').toLowerCase();
-            if (tx.includes('complete')) {
-                transferredCount++;
-                txDone++;
-            } else if (tx.includes('sent') || tx.includes('request')) {
-                txSent++;
-            } else {
-                txNone++;
-            }
+            if (tx.includes('complete')) { transferredCount++; txDone++; }
+            else if (tx.includes('sent') || tx.includes('request')) { txSent++; }
+            else { txNone++; }
         });
 
         document.getElementById('badgeTotal').innerText = `${total} workers`;
-        document.getElementById('badgeExpired').innerText = `${expiredCount} iqama expired`;
+        document.getElementById('badgeExpired').innerText = `${expiredCount} under renewal`;
         document.getElementById('badgeSoon').innerText = `${soonCount} iqama <30d`;
         document.getElementById('badgeTransferred').innerText = `${transferredCount} transferred`;
 
@@ -657,10 +625,8 @@
         const radius = 50;
         const circumference = 2 * Math.PI * radius;
         seg.style.strokeDasharray = circumference;
-        
         let percentage = total > 0 ? (value / total) : 0;
-        let offset = circumference - (percentage * circumference);
-        seg.style.strokeDashoffset = offset;
+        seg.style.strokeDashoffset = circumference - (percentage * circumference);
         seg.style.stroke = color;
     }
 
@@ -673,17 +639,12 @@
 
     function processFilters() {
         const searchVal = document.getElementById('masterSearch').value.toLowerCase().trim();
-        
         let filteredData = masterDataset.filter(row => {
             if (currentFilterTab === 'expired' && row._iqamaState !== 'expired') return false;
             if (currentFilterTab === 'soon' && row._iqamaState !== 'soon') return false;
             if (currentFilterTab === 'sent' && !(row['Transfer Status'] || '').toLowerCase().includes('sent')) return false;
             if (currentFilterTab === 'completed' && !(row['Transfer Status'] || '').toLowerCase().includes('complete')) return false;
-
-            if (searchVal !== '') {
-                let match = Object.values(row).some(v => String(v).toLowerCase().includes(searchVal));
-                if (!match) return false;
-            }
+            if (searchVal !== '') return Object.values(row).some(v => String(v).toLowerCase().includes(searchVal));
             return true;
         });
 
@@ -703,19 +664,13 @@
     function renderCardTemplate(dataArray) {
         const cardBox = document.getElementById('cardGridView');
         cardBox.innerHTML = '';
-
-        if(dataArray.length === 0) {
-            cardBox.innerHTML = '<div style="color:var(--text-muted); padding:20px;">No workers match filters.</div>';
-            return;
-        }
+        if(dataArray.length === 0) { cardBox.innerHTML = '<div style="color:var(--text-muted); padding:20px;">No matches.</div>'; return; }
 
         dataArray.forEach(row => {
             const card = document.createElement('div');
             card.className = 'worker-card';
-
-            let pillClass = 'pill-valid';
-            let pillLabel = 'Valid';
-            if(row._iqamaState === 'expired') { pillClass = 'pill-expired'; pillLabel = 'Expired'; }
+            let pillClass = 'pill-valid', pillLabel = 'Valid';
+            if(row._iqamaState === 'expired') { pillClass = 'pill-expired'; pillLabel = 'Under Renewal'; }
             else if(row._iqamaState === 'soon') { pillClass = 'pill-soon'; pillLabel = 'Soon'; }
 
             card.innerHTML = `
@@ -723,22 +678,10 @@
                     <div class="worker-card-name">${row['Name'] || 'No Name'}</div>
                     <div class="worker-card-id">${row['Employee Number'] || '-'}</div>
                 </div>
-                <div class="worker-card-detail">
-                    <span>Profession</span>
-                    <span>${row['Profession'] || '-'}</span>
-                </div>
-                <div class="worker-card-detail">
-                    <span>Sponsor</span>
-                    <span>${row['Sponsor'] || '-'}</span>
-                </div>
-                <div class="worker-card-detail">
-                    <span>Iqama No</span>
-                    <span>${row['Iqama No'] || '-'}</span>
-                </div>
-                <div class="worker-card-detail">
-                    <span>Status</span>
-                    <span class="status-pill ${pillClass}">${pillLabel}</span>
-                </div>
+                <div class="worker-card-detail"><span>Profession</span><span>${row['Profession'] || '-'}</span></div>
+                <div class="worker-card-detail"><span>Sponsor</span><span>${row['Sponsor'] || '-'}</span></div>
+                <div class="worker-card-detail"><span>Iqama No</span><span>${row['Iqama No'] || '-'}</span></div>
+                <div class="worker-card-detail"><span>Status</span><span class="status-pill ${pillClass}">${pillLabel}</span></div>
             `;
             cardBox.appendChild(card);
         });
@@ -747,17 +690,14 @@
     function renderGridTable(dataArray) {
         const trHead = document.getElementById('gridHeaders');
         const trBody = document.getElementById('gridRows');
-        trHead.innerHTML = '';
-        trBody.innerHTML = '';
+        trHead.innerHTML = ''; trBody.innerHTML = '';
 
-        if(!headersList || !headersList.length) {
+        if(!headersList.length) {
             headersList = ['Name', 'Profession', 'Employee Number', 'Sponsor', 'Project', 'Nationality', 'Batch No', 'Location', 'Google Location (address or maps link)', 'Petrol Pump Station No', 'Iqama No', 'Iqama Expiry', 'Mobile Number', 'Basic Salary', 'Food Allowance', 'Transfer Status', 'Note', 'T-Shirt', 'Pant', 'Shoes', 'Last Updated'];
         }
 
         headersList.forEach(h => {
-            const th = document.createElement('th');
-            th.innerText = h;
-            trHead.appendChild(th);
+            const th = document.createElement('th'); th.innerText = h; trHead.appendChild(th);
         });
 
         dataArray.forEach(row => {
@@ -765,84 +705,57 @@
             headersList.forEach(col => {
                 const td = document.createElement('td');
                 const boxInput = document.createElement('input');
-                boxInput.type = "text";
-                boxInput.value = row[col] || '';
-                
-                boxInput.addEventListener('change', (e) => {
-                    row[col] = e.target.value;
-                    calculateMetrics();
-                });
-
-                td.appendChild(boxInput);
-                tr.appendChild(td);
+                boxInput.type = "text"; boxInput.value = row[col] || '';
+                boxInput.addEventListener('change', (e) => { row[col] = e.target.value; calculateMetrics(); });
+                td.appendChild(boxInput); tr.appendChild(td);
             });
             trBody.appendChild(tr);
         });
     }
 
     function addNewWorkerRow() {
-        let newRecord = {};
-        if(!headersList || !headersList.length) {
+        if(!headersList.length) {
             headersList = ['Name', 'Profession', 'Employee Number', 'Sponsor', 'Project', 'Nationality', 'Batch No', 'Location', 'Google Location (address or maps link)', 'Petrol Pump Station No', 'Iqama No', 'Iqama Expiry', 'Mobile Number', 'Basic Salary', 'Food Allowance', 'Transfer Status', 'Note', 'T-Shirt', 'Pant', 'Shoes', 'Last Updated'];
         }
-        headersList.forEach(h => newRecord[h] = '');
+        let newRecord = {}; headersList.forEach(h => newRecord[h] = '');
         newRecord['Name'] = 'New Worker Record';
-        masterDataset.unshift(newRecord);
-        calculateMetrics();
-        processFilters();
+        masterDataset.unshift(newRecord); calculateMetrics(); processFilters();
     }
 
     function handleFileUpload(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = function(e) { parseInputCSV(e.target.result); };
-        reader.readAsText(file);
+        const file = event.target.files[0]; if (!file) return;
+        const reader = new FileReader(); reader.onload = function(e) { parseInputCSV(e.target.result); }; reader.readAsText(file);
     }
 
     function exportDataCSV() {
-        const outputCollection = masterDataset.map(item => {
-            let cleanObj = {};
-            headersList.forEach(h => cleanObj[h] = item[h] || '');
-            return cleanObj;
+        const output = masterDataset.map(item => {
+            let cleanObj = {}; headersList.forEach(h => cleanObj[h] = item[h] || ''); return cleanObj;
         });
-
-        const csvString = Papa.unparse({ fields: headersList, data: outputCollection });
+        const csvString = Papa.unparse({ fields: headersList, data: output });
         const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
-        const url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
+        link.setAttribute("href", URL.createObjectURL(blob));
         link.setAttribute("download", "ARM_Workforce_Roster_Updated.csv");
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        document.body.appendChild(link); link.click(); document.body.removeChild(link);
     }
 
     function encodeUtf8ToBase64(str) {
         const bytes = new TextEncoder().encode(str);
         let binString = "";
-        for (let i = 0; i < bytes.length; i++) {
-            binString += String.fromCharCode(bytes[i]);
-        }
+        for (let i = 0; i < bytes.length; i++) { binString += String.fromCharCode(bytes[i]); }
         return btoa(binString);
     }
 
     function openPatModalToSave() {
-        const previouslySavedToken = localStorage.getItem('secure_git_token') || "";
-        document.getElementById('modalPatField').value = previouslySavedToken;
+        document.getElementById('modalPatField').value = localStorage.getItem('secure_git_token') || "";
         document.getElementById('patModalOverlay').style.display = 'flex';
     }
 
-    function closePatModal() {
-        document.getElementById('patModalOverlay').style.display = 'none';
-    }
+    function closePatModal() { document.getElementById('patModalOverlay').style.display = 'none'; }
 
     async function confirmSaveWithPat() {
         const enteredToken = document.getElementById('modalPatField').value.trim();
-        if (!enteredToken) {
-            alert("A valid GitHub Token (PAT) is required.");
-            return;
-        }
+        if (!enteredToken) { alert("A valid GitHub Token (PAT) is required."); return; }
         localStorage.setItem('secure_git_token', enteredToken);
         localGitHubToken = enteredToken;
         closePatModal();
@@ -851,12 +764,10 @@
 
     async function executeGitHubPush() {
         const token = localGitHubToken;
-        document.getElementById('syncLabel').innerText = "Saving changes directly to GitHub...";
+        document.getElementById('syncLabel').innerText = "Saving to GitHub...";
 
         const cleanRows = masterDataset.map(row => {
-            let cleanObj = {};
-            headersList.forEach(h => cleanObj[h] = row[h] || '');
-            return cleanObj;
+            let cleanObj = {}; headersList.forEach(h => cleanObj[h] = row[h] || ''); return cleanObj;
         });
         const cleanCSV = Papa.unparse({ fields: headersList, data: cleanRows });
 
@@ -865,35 +776,30 @@
         const filePath = "Data.csv"; 
         const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePath}`;
 
-        let currentSha = null;
-
         try {
             const getResponse = await fetch(apiUrl, {
-                headers: { "Authorization": `token ${token}` }
+                headers: { "Authorization": `Bearer ${token}` }
             });
             
             if (!getResponse.ok) {
                 const errData = await getResponse.json().catch(() => ({}));
-                const reason = errData.message || `Status Code ${getResponse.status}`;
-                throw new Error(`Failed to read existing Data.csv status. Reason: ${reason}`);
+                throw new Error(`GitHub check failed. Status ${getResponse.status}: ${errData.message || 'Check your token configuration'}`);
             }
 
             const fileData = await getResponse.json();
-            currentSha = fileData.sha;
-            
+            const currentSha = fileData.sha;
             const base64Content = encodeUtf8ToBase64(cleanCSV);
+            
             const payload = {
                 message: "Auto-save from ARM Dashboard interface",
-                content: base64Content
+                content: base64Content,
+                sha: currentSha
             };
-            if (currentSha) {
-                payload.sha = currentSha;
-            }
 
             const putResponse = await fetch(apiUrl, {
                 method: "PUT",
                 headers: {
-                    "Authorization": `token ${token}`,
+                    "Authorization": `Bearer ${token}`,
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify(payload)
@@ -904,8 +810,7 @@
                 alert("Saved and updated successfully!");
             } else {
                 const putErrData = await putResponse.json().catch(() => ({}));
-                const putReason = putErrData.message || `Status Code ${putResponse.status}`;
-                throw new Error(`Write failed. Reason: ${putReason}`);
+                throw new Error(`Write failed. Status ${putResponse.status}: ${putErrData.message || 'Write permission denied'}`);
             }
         } catch(err) {
             console.error(err);
