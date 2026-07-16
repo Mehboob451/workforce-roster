@@ -678,10 +678,10 @@
                     <div class="worker-card-name">${row['Name'] || 'No Name'}</div>
                     <div class="worker-card-id">${row['Employee Number'] || '-'}</div>
                 </div>
-                <div class="worker-card-detail"><span>Profession</span><span>${row['Profession'] || '-'}</span></div>
-                <div class="worker-card-detail"><span>Sponsor</span><span>${row['Sponsor'] || '-'}</span></div>
                 <div class="worker-card-detail"><span>Iqama No</span><span>${row['Iqama No'] || '-'}</span></div>
-                <div class="worker-card-detail"><span>Status</span><span class="status-pill ${pillClass}">${pillLabel}</span></div>
+                <div class="worker-card-detail"><span>Mobile Number</span><span>${row['Mobile Number'] || '-'}</span></div>
+                <div class="worker-card-detail"><span>Location</span><span>${row['Location'] || '-'}</span></div>
+                <div class="worker-card-detail"><span>Status</span><div><span class="status-pill ${pillClass}" style="margin-right: 6px;">${pillLabel}</span><span style="color:#ffffff; font-weight:500;">${row['Iqama Expiry'] || '-'}</span></div></div>
             `;
             cardBox.appendChild(card);
         });
